@@ -1,0 +1,25 @@
+import customtkinter as ctk
+
+class NavigationController:
+    """Centralized navigation controller to handle page transitions."""
+    def __init__(self, root_window):
+        self.root = root_window
+        self.current_frame = None
+        self.views = {}
+
+    def register_views(self, views_dict):
+        self.views.update(views_dict)
+
+    def navigate(self, view_name, **kwargs):
+        if view_name not in self.views:
+            return
+        if self.current_frame is not None:
+            self.current_frame.destroy()
+        view_class = self.views[view_name]
+        self.current_frame = view_class(self.root.main_content_frame, self, **kwargs)
+        self.current_frame.pack(fill="both", expand=True)
+        if hasattr(self.root, 'update_sidebar_active'):
+            self.root.update_sidebar_active(view_name)
+
+    def navigate_home(self):
+        self.navigate("Dashboard")
