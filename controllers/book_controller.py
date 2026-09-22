@@ -19,3 +19,25 @@ class BookController:
         """
         cursor, conn = execute_query(query, (isbn, title, author, category, publisher, total_copies, total_copies), commit=True)
         conn.close()
+
+    @staticmethod
+    def update_book(book_id, isbn, title, author, category, publisher, total_copies):
+        total_copies = int(total_copies)
+        cursor, conn = execute_query("SELECT total_copies, available_copies FROM books WHERE book_id = ?", (book_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise ValueError("Book not found")
+        old_total, available = row['total_copies'], row['available_copies']
+        conn.close()
+        issued = old_total - available
+        new_available = total_copies - issued
+        if new_available < 0:
+            raise ValueError("Cannot reduce total copies below currently issued copies.")
+        query = """
+            UPDATE books SET
+            isbn = ?, title = ?, author = ?, category = ?, publisher = ?, total_copies = ?, available_copies = ?
+            WHERE book_id = ?
+        """
+        cursor, conn = execute_query(query, (isbn, title, author, category, publisher, total_copies, new_available, book_id), commit=True)
+        conn.close()
