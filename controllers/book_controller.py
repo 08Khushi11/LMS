@@ -41,3 +41,14 @@ class BookController:
         """
         cursor, conn = execute_query(query, (isbn, title, author, category, publisher, total_copies, new_available, book_id), commit=True)
         conn.close()
+
+    @staticmethod
+    def delete_book(book_id):
+        cursor, conn = execute_query("SELECT total_copies, available_copies FROM books WHERE book_id = ?", (book_id,))
+        row = cursor.fetchone()
+        if row and row['total_copies'] != row['available_copies']:
+            conn.close()
+            raise ValueError("Cannot delete book while copies are issued.")
+        conn.close()
+        cursor, conn = execute_query("DELETE FROM books WHERE book_id = ?", (book_id,), commit=True)
+        conn.close()
