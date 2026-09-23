@@ -43,6 +43,18 @@ class BookController:
         conn.close()
 
     @staticmethod
+    def search_books(query_text):
+        query = """
+            SELECT * FROM books 
+            WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ? OR category LIKE ?
+        """
+        like_text = f"%{query_text}%"
+        cursor, conn = execute_query(query, (like_text, like_text, like_text, like_text))
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    @staticmethod
     def delete_book(book_id):
         cursor, conn = execute_query("SELECT total_copies, available_copies FROM books WHERE book_id = ?", (book_id,))
         row = cursor.fetchone()
