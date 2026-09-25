@@ -32,6 +32,22 @@ class MemberController:
         conn.close()
 
     @staticmethod
+    def search_members(query_text):
+        query = """
+            SELECT * FROM members 
+            WHERE full_name LIKE ? OR email LIKE ? OR phone LIKE ? OR member_id = ?
+        """
+        like_text = f"%{query_text}%"
+        try:
+            member_id_val = int(query_text)
+        except ValueError:
+            member_id_val = -1
+        cursor, conn = execute_query(query, (like_text, like_text, like_text, member_id_val))
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    @staticmethod
     def delete_member(member_id):
         cursor, conn = execute_query("SELECT COUNT(*) as count FROM transactions WHERE member_id = ? AND status = 'Issued'", (member_id,))
         count = cursor.fetchone()['count']
