@@ -1,11 +1,12 @@
 import customtkinter as ctk
 
 class NavigationController:
-    """Centralized navigation controller to handle page transitions."""
+    """Centralized navigation controller to handle page transitions and shortcuts."""
     def __init__(self, root_window):
         self.root = root_window
         self.current_frame = None
         self.views = {}
+        self._bind_shortcuts()
 
     def register_views(self, views_dict):
         self.views.update(views_dict)
@@ -23,3 +24,15 @@ class NavigationController:
 
     def navigate_home(self):
         self.navigate("Dashboard")
+
+    def _bind_shortcuts(self):
+        self.root.bind('<Control-d>', lambda e: self.navigate_home())
+        self.root.bind('<Control-D>', lambda e: self.navigate_home())
+        self.root.bind('<Control-b>', lambda e: self.navigate('Books'))
+        self.root.bind('<Control-B>', lambda e: self.navigate('Books'))
+        self.root.bind('<Control-m>', lambda e: self.navigate('Members'))
+        self.root.bind('<Control-M>', lambda e: self.navigate('Members'))
+        self.root.bind('<Control-i>', lambda e: self.navigate('IssueBook'))
+        self.root.bind('<Control-I>', lambda e: self.navigate('IssueBook'))
+        self.root.bind('<Control-r>', lambda e: self.navigate('ReturnBook'))
+        self.root.bind('<Control-R>', lambda e: self.navigate('ReturnBook'))
