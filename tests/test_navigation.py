@@ -19,11 +19,34 @@ class DummyRoot(ctk.CTk):
 def test_navigation_controller():
     root = DummyRoot()
     nav = NavigationController(root)
-    nav.register_views({"Dashboard": DummyView, "Books": DummyView})
+    
+    nav.register_views({
+        "Dashboard": DummyView,
+        "Books": DummyView,
+        "Reports": DummyView
+    })
+    
+    # Test navigation routing
     nav.navigate("Dashboard")
     assert root.active_sidebar == "Dashboard"
+    assert isinstance(nav.current_frame, DummyView)
+    
+    # Test navigation Home
     nav.navigate_home()
     assert root.active_sidebar == "Dashboard"
+    
+    # Test different view
     nav.navigate("Books")
     assert root.active_sidebar == "Books"
+
+    # Test Reports view
+    nav.navigate("Reports")
+    assert root.active_sidebar == "Reports"
+
+    # Test navigating to unknown view does not crash
+    nav.navigate("NonExistentView")
+    assert root.active_sidebar == "Reports"  # remains unchanged
+    
+    # Cleanup
     root.destroy()
+
