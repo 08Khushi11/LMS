@@ -12,6 +12,7 @@ import database.db_connection
 
 @pytest.fixture(autouse=True)
 def setup_db():
+    orig_db = database.db_connection.DB_PATH
     fd, temp_db = tempfile.mkstemp()
     os.close(fd)
     
@@ -20,7 +21,7 @@ def setup_db():
     
     yield
     
-    # Cleanup: since all connections are closed properly, remove will succeed cleanly
+    database.db_connection.DB_PATH = orig_db
     if os.path.exists(temp_db):
         try:
             os.remove(temp_db)
