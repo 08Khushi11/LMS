@@ -21,9 +21,17 @@ class DummyRoot(ctk.CTk):
     def update_sidebar_active(self, view_name):
         self.active_sidebar = view_name
 
-def test_navigation_controller():
+@pytest.fixture(scope="module")
+def app_root():
     root = DummyRoot()
-    nav = NavigationController(root)
+    yield root
+    try:
+        root.destroy()
+    except Exception:
+        pass
+
+def test_navigation_controller(app_root):
+    nav = NavigationController(app_root)
     
     nav.register_views({
         "Dashboard": DummyView,
@@ -33,32 +41,29 @@ def test_navigation_controller():
     
     # Test navigation routing
     nav.navigate("Dashboard")
-    assert root.active_sidebar == "Dashboard"
+    assert app_root.active_sidebar == "Dashboard"
     assert isinstance(nav.current_frame, DummyView)
     assert nav.current_view_name == "Dashboard"
     
     # Test navigation Home
     nav.navigate_home()
-    assert root.active_sidebar == "Dashboard"
+    assert app_root.active_sidebar == "Dashboard"
     
     # Test different view
     nav.navigate("Books")
-    assert root.active_sidebar == "Books"
+    assert app_root.active_sidebar == "Books"
     assert nav.current_view_name == "Books"
 
     # Test Members view
     nav.navigate("Members")
-    assert root.active_sidebar == "Members"
+    assert app_root.active_sidebar == "Members"
 
     # Test navigating to unknown view does not crash
     nav.navigate("NonExistentView")
-    assert root.active_sidebar == "Members"  # remains unchanged
-    
-    root.destroy()
+    assert app_root.active_sidebar == "Members"  # remains unchanged
 
-def test_real_views_instantiation_no_blank_screen():
-    root = DummyRoot()
-    nav = NavigationController(root)
+def test_real_views_instantiation_no_blank_screen(app_root):
+    nav = NavigationController(app_root)
     nav.register_views({
         "Dashboard": DashboardView,
         "Books": BooksView,
@@ -70,13 +75,13 @@ def test_real_views_instantiation_no_blank_screen():
     views = ["Dashboard", "Books", "Members", "IssueBook", "ReturnBook"]
     for v in views:
         nav.navigate(v)
-        root.update()
+        app_root.update()
         assert nav.current_frame is not None, f"View {v} resulted in empty frame"
         assert nav.current_view_name == v
 
     # Verify BooksView methods
     nav.navigate("Books")
-    root.update()
+    app_root.update()
     assert isinstance(nav.current_frame, BooksView)
     assert hasattr(nav.current_frame, 'focus_search')
     assert hasattr(nav.current_frame, 'open_add_dialog')
@@ -84,10 +89,8 @@ def test_real_views_instantiation_no_blank_screen():
 
     # Verify MembersView methods
     nav.navigate("Members")
-    root.update()
+    app_root.update()
     assert isinstance(nav.current_frame, MembersView)
     assert hasattr(nav.current_frame, 'focus_search')
     assert hasattr(nav.current_frame, 'open_add_dialog')
     nav.current_frame.focus_search()
-
-    root.destroy()

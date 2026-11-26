@@ -4,7 +4,94 @@ from database.db_connection import fetch_all, fetch_one, execute_write
 class MemberController:
     @staticmethod
     def get_all_members():
-        return fetch_all("SELECT * FROM members ORDER BY registration_date DESC")
+        query = """
+            SELECT m.*, 
+                   COUNT(CASE WHEN t.status IN ('Issued', 'Overdue') THEN 1 END) as active_loans
+            FROM members m
+            LEFT JOIN transactions t ON m.member_id = t.member_id
+            GROUP BY m.member_id
+            ORDER BY m.registration_date DESC
+        """
+        return fetch_all(query)
+
+    @staticmethod
+    def get_member_by_id(member_id):
+        try:
+            mid = int(member_id)
+        except (ValueError, TypeError):
+            return None
+        query = """
+            SELECT m.*, 
+                   COUNT(CASE WHEN t.status IN ('Issued', 'Overdue') THEN 1 END) as active_loans
+            FROM members m
+            LEFT JOIN transactions t ON m.member_id = t.member_id
+            WHERE m.member_id = ?
+            GROUP BY m.member_id
+        """
+        return fetch_one(query, (mid,))
+
+    @staticmethod
+    def get_member_by_name(full_name):
+        clean = str(full_name).strip()
+        if not clean:
+            return None
+        query = """
+            SELECT m.*, 
+                   COUNT(CASE WHEN t.status IN ('Issued', 'Overdue') THEN 1 END) as active_loans
+            FROM members m
+            LEFT JOIN transactions t ON m.member_id = t.member_id
+            WHERE LOWER(m.full_name) = LOWER(?)
+            GROUP BY m.member_id
+            LIMIT 1
+        """
+        member = fetch_one(query, (clean,))
+        if not member:
+            # Partial match
+            query_partial = """
+                SELECT m.*, 
+                       COUNT(CASE WHEN t.status IN ('Issued', 'Overdue') THEN 1 END) as active_loans
+                FROM members m
+                LEFT JOIN transactions t ON m.member_id = t.member_id
+                WHERE m.full_name LIKE ?
+                GROUP BY m.member_id
+                LIMIT 1
+            """
+            member = fetch_one(query_partial, (f"%{clean}%",))
+        return member
+
+    @staticmethod
+    def search_members_autocomplete(query_text, limit=15):
+        clean = str(query_text).strip()
+        if not clean:
+            query = """
+                SELECT m.*, 
+                       COUNT(CASE WHEN t.status IN ('Issued', 'Overdue') THEN 1 END) as active_loans
+                FROM members m
+                LEFT JOIN transactions t ON m.member_id = t.member_id
+                GROUP BY m.member_id
+                ORDER BY m.full_name ASC
+                LIMIT ?
+            """
+            return fetch_all(query, (limit,))
+        else:
+            like = f"%{clean}%"
+            try:
+                mid = int(clean)
+            except ValueError:
+                mid = -1
+            query = """
+                SELECT m.*, 
+                       COUNT(CASE WHEN t.status IN ('Issued', 'Overdue') THEN 1 END) as active_loans
+                FROM members m
+                LEFT JOIN transactions t ON m.member_id = t.member_id
+                WHERE m.full_name LIKE ? OR m.email LIKE ? OR m.phone LIKE ? OR m.member_id = ?
+                GROUP BY m.member_id
+                ORDER BY 
+                    CASE WHEN LOWER(m.full_name) LIKE LOWER(?) THEN 1 ELSE 2 END,
+                    m.full_name ASC
+                LIMIT ?
+            """
+            return fetch_all(query, (like, like, like, mid, f"{clean}%", limit))
 
     @staticmethod
     def add_member(full_name, email="", phone="", address=""):
@@ -51,11 +138,6 @@ class MemberController:
 
     @staticmethod
     def search_members(query_text):
-        query = """
-            SELECT * FROM members 
-            WHERE full_name LIKE ? OR email LIKE ? OR phone LIKE ? OR member_id = ?
-            ORDER BY registration_date DESC
-        """
         clean_text = str(query_text).strip()
         like_text = f"%{clean_text}%"
         try:
@@ -63,6 +145,15 @@ class MemberController:
         except ValueError:
             member_id_val = -1
 
+        query = """
+            SELECT m.*, 
+                   COUNT(CASE WHEN t.status IN ('Issued', 'Overdue') THEN 1 END) as active_loans
+            FROM members m
+            LEFT JOIN transactions t ON m.member_id = t.member_id
+            WHERE m.full_name LIKE ? OR m.email LIKE ? OR m.phone LIKE ? OR m.member_id = ?
+            GROUP BY m.member_id
+            ORDER BY m.registration_date DESC
+        """
         return fetch_all(query, (like_text, like_text, like_text, member_id_val))
 
     @staticmethod
@@ -79,4 +170,3 @@ class MemberController:
             raise ValueError("Cannot delete member with currently issued or overdue books.")
 
         execute_write("DELETE FROM members WHERE member_id = ?", (member_id,))
-
